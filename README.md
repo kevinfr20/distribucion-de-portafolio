@@ -22,6 +22,16 @@ from portfolio import Portfolio
 # Create a portfolio with given assets and weights
 assets = ['Asset1', 'Asset2', 'Asset3']
 
+# Example usage of the class
+if __name__ == '__main__':
+    mean_returns = [0.1, 0.08]
+    volatilities = [0.2, 0.15]
+    weights = [0.5, 0.5]
+    portfolio_manager = PortfolioRiskManager(mean_returns, volatilities, weights)
+    portfolio_manager.run_monte_carlo()
+    portfolio_manager.generate_report()
+
+
 
 # Calculate the expected return
 expected_return = portfolio.expected_return()
