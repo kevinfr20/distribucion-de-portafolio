@@ -21,8 +21,7 @@ from portfolio import Portfolio
 
 # Create a portfolio with given assets and weights
 assets = ['Asset1', 'Asset2', 'Asset3']
-weights = [0.4, 0.4, 0.2]
-portfolio = Portfolio(assets, weights)
+
 
 # Calculate the expected return
 expected_return = portfolio.expected_return()
