@@ -1,0 +1,596 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.optimize import minimize
+from scipy.stats import norm
+import yfinance as yf
+from datetime import datetime, timedelta
+import warnings
+from matplotlib.backends.backend_pdf import PdfPages
+
+warnings.filterwarnings('ignore')
+sns.set_style("darkgrid")
+
+# ==================== DATA FETCHER ====================
+class DataFetcher:
+    """Descarga datos históricos de Yahoo Finance"""
+    
+    @staticmethod
+    def fetch_data(tickers, start_date=None, end_date=None):
+        """
+        Descarga precios históricos
+        
+        Parameters:
+        -----------
+        tickers : list
+            Lista de tickers (ej: ['AAPL', 'MSFT', 'GOOGL'])
+        start_date : str
+            Fecha inicio (YYYY-MM-DD)
+        end_date : str
+            Fecha fin (YYYY-MM-DD)
+        
+        Returns:
+        --------
+        pd.DataFrame : Precios ajustados
+        """
+        if start_date is None:
+            start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+        if end_date is None:
+            end_date = datetime.now().strftime('%Y-%m-%d')
+        
+        print(f"📥 Descargando datos para {tickers} desde {start_date}...")
+        data = yf.download(tickers, start=start_date, end=end_date, progress=False)
+        
+        if isinstance(data, pd.Series):
+            data = data.to_frame()
+        
+        return data['Adj Close']
+
+
+# ==================== PORTFOLIO RISK MANAGER ====================
+class PortfolioRiskManager:
+    """Sistema completo de gestión de riesgo de portafolio"""
+    
+    def __init__(self, prices, weights=None):
+        """
+        Inicializa el gestor de riesgo
+        
+        Parameters:
+        -----------
+        prices : pd.DataFrame
+            DataFrame con precios históricos
+        weights : array-like, optional
+            Pesos del portafolio
+        """
+        self.prices = prices
+        self.returns = prices.pct_change().dropna()
+        self.log_returns = np.log(prices / prices.shift(1)).dropna()
+        
+        n_assets = len(prices.columns)
+        self.weights = np.array([1/n_assets] * n_assets) if weights is None else np.array(weights)
+        
+        self.cov_matrix = self.returns.cov()
+        self.mean_returns = self.returns.mean()
+        self.std_returns = self.returns.std()
+        self.correlation_matrix = self.returns.corr()
+    
+    # ==================== MÉTRICAS BÁSICAS ====================
+    
+    def calculate_volatility(self, annualized=True):
+        """Calcula volatilidad del portafolio"""
+        portfolio_var = np.dot(self.weights, np.dot(self.cov_matrix, self.weights))
+        portfolio_vol = np.sqrt(portfolio_var)
+        return portfolio_vol * np.sqrt(252) if annualized else portfolio_vol
+    
+    def calculate_expected_return(self, annualized=True):
+        """Calcula retorno esperado"""
+        portfolio_return = np.dot(self.weights, self.mean_returns)
+        return portfolio_return * 252 if annualized else portfolio_return
+    
+    def calculate_sharpe_ratio(self, risk_free_rate=0.02):
+        """Calcula Sharpe ratio"""
+        exc_return = self.calculate_expected_return() - risk_free_rate
+        vol = self.calculate_volatility()
+        return exc_return / vol if vol > 0 else 0
+    
+    def calculate_var(self, confidence_level=0.95, method='historical'):
+        """Calcula Value at Risk"""
+        portfolio_returns = np.dot(self.returns, self.weights)
+        
+        if method == 'historical':
+            var = np.percentile(portfolio_returns, (1 - confidence_level) * 100)
+        else:  # parametric
+            mean = portfolio_returns.mean()
+            std = portfolio_returns.std()
+            var = mean + norm.ppf(1 - confidence_level) * std
+        
+        return var
+    
+    def calculate_cvar(self, confidence_level=0.95):
+        """Calcula CVaR (Expected Shortfall)"""
+        portfolio_returns = np.dot(self.returns, self.weights)
+        var = self.calculate_var(confidence_level)
+        cvar = portfolio_returns[portfolio_returns <= var].mean()
+        return cvar
+    
+    def maximum_drawdown(self):
+        """Calcula drawdown máximo"""
+        portfolio_returns = np.dot(self.returns, self.weights)
+        cumulative = (1 + portfolio_returns).cumprod()
+        running_max = cumulative.expanding().max()
+        drawdown = (cumulative - running_max) / running_max
+        return drawdown.min()
+    
+    # ==================== OPTIMIZACIÓN ====================
+    
+    def optimize_portfolio(self, objective='sharpe', risk_free_rate=0.02):
+        """Optimiza el portafolio"""
+        n_assets = len(self.prices.columns)
+        
+        constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1},)
+        bounds = tuple((0, 1) for _ in range(n_assets))
+        init_weights = np.array([1/n_assets] * n_assets)
+        
+        if objective == 'sharpe':
+            def func(w):
+                ret = np.dot(w, self.mean_returns) * 252 - risk_free_rate
+                vol = np.sqrt(np.dot(w, np.dot(self.cov_matrix, w)) * 252)
+                return -ret / vol if vol > 0 else 0
+        elif objective == 'min_volatility':
+            def func(w):
+                return np.sqrt(np.dot(w, np.dot(self.cov_matrix, w)) * 252)
+        
+        result = minimize(func, init_weights, method='SLSQP', bounds=bounds, constraints=constraints)
+        self.weights = result.x
+        
+        return {
+            'weights': dict(zip(self.prices.columns, result.x)),
+            'expected_return': np.dot(result.x, self.mean_returns) * 252,
+            'volatility': np.sqrt(np.dot(result.x, np.dot(self.cov_matrix, result.x))) * np.sqrt(252),
+            'sharpe_ratio': (np.dot(result.x, self.mean_returns) * 252 - risk_free_rate) / 
+                          (np.sqrt(np.dot(result.x, np.dot(self.cov_matrix, result.x)) * 252))
+        }
+    
+    # ==================== MONTE CARLO SIMULATION ====================
+    
+    def monte_carlo_simulation(self, n_simulations=10000, n_days=252, initial_investment=10000):
+        """Simulación de Monte Carlo"""
+        print(f"🎲 Ejecutando {n_simulations} simulaciones de Monte Carlo...")
+        
+        mean_ret = self.mean_returns.values
+        cov = self.cov_matrix.values
+        results = np.zeros((n_simulations, n_days + 1))
+        
+        for sim in range(n_simulations):
+            portfolio_value = np.array([initial_investment])
+            for day in range(n_days):
+                daily_ret = np.dot(self.weights, np.random.multivariate_normal(mean_ret, cov))
+                new_value = portfolio_value[-1] * (1 + daily_ret)
+                portfolio_value = np.append(portfolio_value, new_value)
+            results[sim, :] = portfolio_value
+        
+        final_values = results[:, -1]
+        returns_pct = (final_values - initial_investment) / initial_investment
+        
+        return {
+            'simulations': results,
+            'final_values': final_values,
+            'mean_final': np.mean(final_values),
+            'std_final': np.std(final_values),
+            'min_final': np.min(final_values),
+            'max_final': np.max(final_values),
+            'percentile_5': np.percentile(final_values, 5),
+            'percentile_95': np.percentile(final_values, 95),
+            'var_95': np.percentile(returns_pct, 5) * initial_investment,
+            'cvar_95': np.mean(returns_pct[returns_pct <= np.percentile(returns_pct, 5)]) * initial_investment
+        }
+    
+    # ==================== STRESS TESTING ====================
+    
+    def stress_test(self, scenarios=None):
+        """Análisis de stress testing"""
+        if scenarios is None:
+            scenarios = {
+                '🔴 Crisis Moderada (-5%)': -0.05,
+                '🔴 Crisis Severa (-15%)': -0.15,
+                '🔴 Crisis Extrema (-30%)': -0.30,
+                '🟢 Rally Moderado (+10%)': 0.10,
+                '🟢 Rally Fuerte (+20%)': 0.20,
+                '🟡 Volatilidad Extrema (2x)': 0.00
+            }
+        
+        results = {}
+        for scenario_name, change in scenarios.items():
+            if 'Volatilidad' in scenario_name:
+                stressed_returns = self.returns * 2
+            else:
+                stressed_returns = self.returns + change
+            
+            ret = np.dot(self.weights, stressed_returns.mean()) * 252
+            vol = np.sqrt(np.dot(self.weights, np.dot(stressed_returns.cov(), self.weights))) * np.sqrt(252)
+            sharpe = (ret - 0.02) / vol if vol > 0 else 0
+            
+            results[scenario_name] = {
+                'expected_return': ret,
+                'volatility': vol,
+                'sharpe_ratio': sharpe
+            }
+        
+        return results
+    
+    # ==================== SENSIBILIDAD ====================
+    
+    def sensitivity_analysis(self, parameter='mean_return', range_pct=0.2, n_steps=11):
+        """Análisis de sensibilidad"""
+        variations = np.linspace(-range_pct, range_pct, n_steps)
+        results = {}
+        
+        for var in variations:
+            if parameter == 'mean_return':
+                adj_returns = self.mean_returns * (1 + var)
+                ret = np.dot(self.weights, adj_returns) * 252
+                vol = np.sqrt(np.dot(self.weights, np.dot(self.cov_matrix, self.weights))) * np.sqrt(252)
+            
+            sharpe = (ret - 0.02) / vol if vol > 0 else 0
+            results[f"{var*100:+.1f}%"] = {'return': ret, 'sharpe': sharpe}
+        
+        return results
+    
+    # ==================== BACKTESTING ====================
+    
+    def backtest(self, initial_capital=10000, rebalance_freq='monthly'):
+        """Backtesting del portafolio"""
+        portfolio_values = [initial_capital]
+        portfolio_returns = []
+        
+        freq_days = {'daily': 1, 'weekly': 5, 'monthly': 21, 'quarterly': 63}
+        rebalance_days = freq_days.get(rebalance_freq, 21)
+        
+        for i in range(1, len(self.returns)):
+            daily_return = np.dot(self.weights, self.returns.iloc[i].values)
+            new_value = portfolio_values[-1] * (1 + daily_return)
+            portfolio_values.append(new_value)
+            portfolio_returns.append(daily_return)
+        
+        total_return = (portfolio_values[-1] - initial_capital) / initial_capital
+        annual_return = (portfolio_values[-1] / initial_capital) ** (252 / len(portfolio_returns)) - 1
+        annual_vol = np.std(portfolio_returns) * np.sqrt(252)
+        sharpe = annual_return / annual_vol if annual_vol > 0 else 0
+        
+        # Drawdown máximo
+        cumulative = (1 + np.array(portfolio_returns)).cumprod()
+        running_max = np.maximum.accumulate(cumulative)
+        drawdown = (cumulative - running_max) / running_max
+        max_drawdown = np.min(drawdown)
+        
+        return {
+            'portfolio_values': portfolio_values,
+            'total_return': total_return,
+            'annual_return': annual_return,
+            'annual_volatility': annual_vol,
+            'sharpe_ratio': sharpe,
+            'max_drawdown': max_drawdown,
+            'final_value': portfolio_values[-1]
+        }
+    
+    # ==================== VISUALIZACIONES ====================
+    
+    def plot_monte_carlo(self, n_simulations=5000, n_days=252, initial_investment=10000):
+        """Gráfica de Monte Carlo"""
+        stats = self.monte_carlo_simulation(n_simulations, n_days, initial_investment)
+        
+        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+        fig.suptitle('🎲 SIMULACIÓN DE MONTE CARLO', fontsize=16, fontweight='bold')
+        
+        # Trayectorias
+        for sim in range(min(100, n_simulations)):
+            axes[0, 0].plot(stats['simulations'][sim, :], alpha=0.05, color='blue')
+        axes[0, 0].plot(np.mean(stats['simulations'], axis=0), 'r-', linewidth=3, label='Media')
+        axes[0, 0].fill_between(range(n_days + 1), 
+                               np.percentile(stats['simulations'], 5, axis=0),
+                               np.percentile(stats['simulations'], 95, axis=0),
+                               alpha=0.2, color='red', label='P5-P95')
+        axes[0, 0].set_title('Trayectorias Simuladas')
+        axes[0, 0].set_ylabel('Valor del Portafolio ($)')
+        axes[0, 0].legend()
+        axes[0, 0].grid(alpha=0.3)
+        
+        # Distribución
+        axes[0, 1].hist(stats['final_values'], bins=50, edgecolor='black', alpha=0.7, color='skyblue')
+        axes[0, 1].axvline(stats['mean_final'], color='red', linestyle='--', linewidth=2, label='Media')
+        axes[0, 1].axvline(stats['percentile_5'], color='green', linestyle='--', linewidth=2, label='VaR 95%')
+        axes[0, 1].set_title('Distribución de Valores Finales')
+        axes[0, 1].set_xlabel('Valor ($)')
+        axes[0, 1].legend()
+        axes[0, 1].grid(alpha=0.3, axis='y')
+        
+        # Q-Q Plot
+        from scipy import stats as sp_stats
+        sp_stats.probplot((stats['final_values'] - stats['mean_final']) / stats['std_final'],
+                         dist="norm", plot=axes[1, 0])
+        axes[1, 0].set_title('Q-Q Plot (Test de Normalidad)')
+        axes[1, 0].grid(alpha=0.3)
+        
+        # Resumen
+        axes[1, 1].axis('off')
+        summary = f"""
+        ESTADÍSTICAS MONTE CARLO
+        
+        Simulaciones: {n_simulations:,}
+        Días: {n_days}
+        Capital Inicial: ${initial_investment:,.0f}
+        
+        VALORES FINALES:
+        Media: ${stats['mean_final']:,.0f}
+        Desv. Est.: ${stats['std_final']:,.0f}
+        Mínimo: ${stats['min_final']:,.0f}
+        Máximo: ${stats['max_final']:,.0f}
+        
+        PERCENTILES:
+        P5 (VaR 95%): ${stats['percentile_5']:,.0f}
+        P95: ${stats['percentile_95']:,.0f}
+        
+        RIESGO:
+        VaR 95%: ${stats['var_95']:,.0f}
+        CVaR 95%: ${stats['cvar_95']:,.0f}
+        """
+        axes[1, 1].text(0.1, 0.5, summary, transform=axes[1, 1].transAxes, fontsize=10,
+                       verticalalignment='center', fontfamily='monospace',
+                       bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+        
+        plt.tight_layout()
+        return fig
+    
+    def plot_stress_test(self):
+        """Gráfica de stress testing"""
+        stress = self.stress_test()
+        
+        fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+        fig.suptitle('⚠️ STRESS TESTING ANALYSIS', fontsize=16, fontweight='bold')
+        
+        scenarios = list(stress.keys())
+        returns = [stress[s]['expected_return']*100 for s in scenarios]
+        colors = ['red' if r < 0 else 'green' for r in returns]
+        
+        axes[0].barh(scenarios, returns, color=colors, alpha=0.7, edgecolor='black')
+        axes[0].set_xlabel('Retorno Esperado (%)')
+        axes[0].axvline(x=0, color='black', linestyle='-', linewidth=0.8)
+        axes[0].grid(alpha=0.3, axis='x')
+        
+        sharpes = [stress[s]['sharpe_ratio'] for s in scenarios]
+        colors_sharpe = ['red' if s < 0 else 'green' for s in sharpes]
+        
+        axes[1].barh(scenarios, sharpes, color=colors_sharpe, alpha=0.7, edgecolor='black')
+        axes[1].set_xlabel('Sharpe Ratio')
+        axes[1].axvline(x=0, color='black', linestyle='-', linewidth=0.8)
+        axes[1].grid(alpha=0.3, axis='x')
+        
+        plt.tight_layout()
+        return fig
+    
+    def plot_backtest(self, initial_capital=10000):
+        """Gráfica de backtesting"""
+        backtest = self.backtest(initial_capital)
+        
+        fig, axes = plt.subplots(2, 1, figsize=(15, 10))
+        fig.suptitle('📈 BACKTESTING RESULTS', fontsize=16, fontweight='bold')
+        
+        # Valor del portafolio
+        axes[0].plot(backtest['portfolio_values'], linewidth=2, color='blue')
+        axes[0].fill_between(range(len(backtest['portfolio_values'])), 
+                            backtest['portfolio_values'], alpha=0.3, color='blue')
+        axes[0].set_title('Evolución del Valor del Portafolio')
+        axes[0].set_ylabel('Valor ($)')
+        axes[0].grid(alpha=0.3)
+        
+        # Retornos acumulados
+        returns = pd.Series(backtest['portfolio_values']).pct_change().fillna(0)
+        cumulative = (1 + returns).cumprod()
+        axes[1].plot(cumulative, linewidth=2, color='green')
+        axes[1].fill_between(range(len(cumulative)), cumulative, alpha=0.3, color='green')
+        axes[1].set_title('Retornos Acumulados')
+        axes[1].set_ylabel('Retorno Múltiple')
+        axes[1].set_xlabel('Días')
+        axes[1].grid(alpha=0.3)
+        
+        plt.tight_layout()
+        return fig
+    
+    def plot_sensitivity(self):
+        """Gráfica de sensibilidad"""
+        sensitivity = self.sensitivity_analysis('mean_return')
+        
+        variations = list(sensitivity.keys())
+        sharpes = [sensitivity[v]['sharpe'] for v in variations]
+        returns = [sensitivity[v]['return']*100 for v in variations]
+        
+        fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+        fig.suptitle('📊 ANÁLISIS DE SENSIBILIDAD', fontsize=16, fontweight='bold')
+        
+        axes[0].plot(variations, sharpes, marker='o', linewidth=2, markersize=8, color='blue')
+        axes[0].fill_between(range(len(variations)), sharpes, alpha=0.3, color='blue')
+        axes[0].set_title('Sensibilidad: Sharpe Ratio')
+        axes[0].set_xlabel('Cambio en Retorno Esperado')
+        axes[0].set_ylabel('Sharpe Ratio')
+        axes[0].grid(alpha=0.3)
+        
+        axes[1].plot(variations, returns, marker='s', linewidth=2, markersize=8, color='green')
+        axes[1].fill_between(range(len(variations)), returns, alpha=0.3, color='green')
+        axes[1].set_title('Sensibilidad: Retorno Esperado')
+        axes[1].set_xlabel('Cambio en Retorno Esperado')
+        axes[1].set_ylabel('Retorno Anual (%)')
+        axes[1].grid(alpha=0.3)
+        
+        plt.tight_layout()
+        return fig
+    
+    def plot_correlation_heatmap(self):
+        """Matriz de correlación"""
+        fig, ax = plt.subplots(figsize=(10, 8))
+        
+        mask = np.triu(np.ones_like(self.correlation_matrix, dtype=bool), k=1)
+        sns.heatmap(self.correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm',
+                   center=0, square=True, ax=ax, cbar_kws={'label': 'Correlación'},
+                   mask=mask, vmin=-1, vmax=1)
+        
+        ax.set_title('📊 MATRIZ DE CORRELACIÓN', fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        return fig
+    
+    # ==================== EXPORTACIÓN A PDF ====================
+    
+    def export_to_pdf(self, filename='portfolio_analysis_report.pdf', include_all=True):
+        """Exporta un reporte completo a PDF"""
+        print(f"📄 Generando reporte PDF: {filename}...")
+        
+        with PdfPages(filename) as pdf:
+            # PÁGINA 1: RESUMEN EJECUTIVO
+            fig = plt.figure(figsize=(11, 8.5))
+            fig.suptitle('REPORTE DE ANÁLISIS DE PORTAFOLIO', fontsize=18, fontweight='bold', y=0.98)
+            
+            ax = fig.add_subplot(111)
+            ax.axis('off')
+            
+            summary_text = f"""
+            {'='*80}
+            RESUMEN EJECUTIVO
+            {'='*80}
+            
+            Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+            Activos: {', '.join(self.prices.columns)}
+            Período: {self.prices.index[0].strftime('%Y-%m-%d')} a {self.prices.index[-1].strftime('%Y-%m-%d')}
+            
+            {'='*80}
+            COMPOSICIÓN DEL PORTAFOLIO
+            {'='*80}
+            """
+            
+            for asset, weight in zip(self.prices.columns, self.weights):
+                summary_text += f"\n{asset:<15} {weight*100:>8.2f}%"
+            
+            summary_text += f"""
+            
+            {'='*80}
+            MÉTRICAS CLAVE
+            {'='*80}
+            
+            Retorno Esperado (Anual):  {self.calculate_expected_return()*100:>8.2f}%
+            Volatilidad (Anual):       {self.calculate_volatility()*100:>8.2f}%
+            Sharpe Ratio:              {self.calculate_sharpe_ratio():>8.4f}
+            
+            Value at Risk (95%):       {self.calculate_var(0.95)*100:>8.4f}%
+            CVaR (95%):                {self.calculate_cvar(0.95)*100:>8.4f}%
+            Drawdown Máximo:           {self.maximum_drawdown()*100:>8.2f}%
+            """
+            
+            ax.text(0.05, 0.95, summary_text, transform=ax.transAxes, fontsize=9,
+                   verticalalignment='top', fontfamily='monospace',
+                   bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.7))
+            
+            pdf.savefig(fig, bbox_inches='tight')
+            plt.close(fig)
+            
+            # PÁGINA 2: MONTE CARLO
+            try:
+                fig = self.plot_monte_carlo()
+                pdf.savefig(fig, bbox_inches='tight')
+                plt.close(fig)
+            except Exception as e:
+                print(f"Error en Monte Carlo: {e}")
+            
+            # PÁGINA 3: STRESS TEST
+            try:
+                fig = self.plot_stress_test()
+                pdf.savefig(fig, bbox_inches='tight')
+                plt.close(fig)
+            except Exception as e:
+                print(f"Error en Stress Test: {e}")
+            
+            # PÁGINA 4: BACKTESTING
+            try:
+                fig = self.plot_backtest()
+                pdf.savefig(fig, bbox_inches='tight')
+                plt.close(fig)
+            except Exception as e:
+                print(f"Error en Backtesting: {e}")
+            
+            # PÁGINA 5: SENSIBILIDAD
+            try:
+                fig = self.plot_sensitivity()
+                pdf.savefig(fig, bbox_inches='tight')
+                plt.close(fig)
+            except Exception as e:
+                print(f"Error en Sensibilidad: {e}")
+            
+            # PÁGINA 6: CORRELACIÓN
+            try:
+                fig = self.plot_correlation_heatmap()
+                pdf.savefig(fig, bbox_inches='tight')
+                plt.close(fig)
+            except Exception as e:
+                print(f"Error en Correlación: {e}")
+        
+        print(f"✅ Reporte guardado en: {filename}")
+    
+    def generate_comprehensive_report(self):
+        """Genera un reporte completo en diccionario"""
+        return {
+            'timestamp': datetime.now().isoformat(),
+            'assets': list(self.prices.columns),
+            'weights': dict(zip(self.prices.columns, self.weights)),
+            'expected_return': self.calculate_expected_return(),
+            'volatility': self.calculate_volatility(),
+            'sharpe_ratio': self.calculate_sharpe_ratio(),
+            'var_95': self.calculate_var(0.95),
+            'cvar_95': self.calculate_cvar(0.95),
+            'max_drawdown': self.maximum_drawdown()
+        }
+
+
+# ==================== EJEMPLO DE USO ====================
+if __name__ == "__main__":
+    print("\n" + "="*80)
+    print("🚀 SISTEMA AVANZADO DE GESTIÓN DE RIESGO DE PORTAFOLIO")
+    print("="*80 + "\n")
+    
+    # 1. Descargar datos
+    fetcher = DataFetcher()
+    prices = fetcher.fetch_data(['AAPL', 'MSFT', 'GOOGL', 'AMZN'], 
+                                start_date='2023-01-01')
+    
+    # 2. Crear gestor
+    manager = PortfolioRiskManager(prices)
+    print("✅ Portafolio creado exitosamente\n")
+    
+    # 3. Optimizar
+    print("🎯 Optimizando portafolio...")
+    optimal = manager.optimize_portfolio('sharpe')
+    print(f"   Retorno: {optimal['expected_return']*100:.2f}%")
+    print(f"   Volatilidad: {optimal['volatility']*100:.2f}%")
+    print(f"   Sharpe: {optimal['sharpe_ratio']:.4f}\n")
+    
+    # 4. Stress Test
+    print("⚠️  Ejecutando stress testing...")
+    stress = manager.stress_test()
+    print(f"   Escenarios analizados: {len(stress)}\n")
+    
+    # 5. Monte Carlo
+    print("🎲 Ejecutando Monte Carlo...")
+    mc = manager.monte_carlo_simulation(n_simulations=10000)
+    print(f"   Valor esperado: ${mc['mean_final']:,.0f}")
+    print(f"   VaR 95%: ${mc['percentile_5']:,.0f}\n")
+    
+    # 6. Backtesting
+    print("📈 Backtesting del portafolio...")
+    backtest = manager.backtest(initial_capital=10000)
+    print(f"   Retorno: {backtest['total_return']*100:.2f}%")
+    print(f"   Sharpe: {backtest['sharpe_ratio']:.4f}\n")
+    
+    # 7. Generar PDF
+    print("📄 Generando reporte PDF completo...")
+    manager.export_to_pdf('portfolio_complete_analysis.pdf')
+    
+    print("\n" + "="*80)
+    print("✅ ¡ANÁLISIS COMPLETADO EXITOSAMENTE!")
+    print("="*80 + "\n")
