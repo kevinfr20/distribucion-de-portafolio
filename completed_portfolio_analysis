@@ -1,0 +1,3 @@
+with open('/content/advanced_portfolio_analysis.py', 'r') as f:
+    advanced_portfolio_analysis_code = f.read()
+print(advanced_portfolio_analysis_code)
