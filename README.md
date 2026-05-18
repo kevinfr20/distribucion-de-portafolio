@@ -6,7 +6,7 @@
 
 ## 📋 Descripción General
 
-Este proyecto implementa un sistema completo y modular de análisis, optimización y gestión de riesgo para portafolios de inversión. Utiliza técnicas avanzadas de Machine Learning, teoría moderna de portafolios y análisis cuantitativo de riesgo.
+Este proyecto implementa un sistema completo y modular de análisis, optimización y gestión de riesgo para portafolios de inversión. Utiliza técnicas avanzadas de Machine Learning, teoría moderna de portafolios y análisis estadístico.
 
 ### ✨ Características Principales
 
@@ -189,276 +189,434 @@ predictions = ensemble.predict_future(days=30)
 
 ---
 
-## 📊 Módulos Detallados
+## 🎓 Guía Paso a Paso: Usar en Google Colab
 
-### 1. **unified_portfolio_colab.py** - Gestor Principal
+Esta sección te guiará para ejecutar el sistema completamente en **Google Colab** sin necesidad de instalar nada localmente.
 
-**DataFetcher**
-- Descarga datos de Yahoo Finance
-- Maneja MultiIndex de pandas
-- Soporte para dividendos
+### **Paso 1: Crear un Notebook en Google Colab**
 
-**UnifiedPortfolioManager**
-- Optimización de pesos
-- Cálculo de métricas (Sharpe, Volatilidad, etc.)
-- VaR y CVaR
-- Stress testing
-- Monte Carlo simulation
-- Backtesting con rebalanceo
-- Comparación con benchmarks
+1. Ve a [https://colab.research.google.com/](https://colab.research.google.com/)
+2. Haz clic en **"Nuevo Notebook"**
+3. Renómbralo como: `Portfolio-Analysis`
 
-**Métodos principales:**
+---
+
+### **Paso 2: Clonar el Repositorio**
+
+En la primera celda de Colab, ejecuta:
+
 ```python
-manager.optimize_portfolio(criterion='sharpe')
-manager.optimize_with_constraints(min_weight=0.05, max_weight=0.5)
-manager.calculate_var(confidence_level=0.95)
-manager.backtest_portfolio(weights, rebalance_freq='monthly')
-manager.stress_test()
-manager.monte_carlo_simulation(n_simulations=10000)
-manager.export_to_pdf('reporte.pdf')
+# Clonar el repositorio
+!git clone https://github.com/kevinfr20/distribucion-de-portafolio.git
 ```
 
-### 2. **risk_metrics.py** - Análisis Avanzado de Riesgo
+Luego, verifica que los archivos estén disponibles:
 
-**AdvancedRiskMetrics**
-- VaR paramétrico e histórico
-- CVaR (Expected Shortfall)
-- Drawdown y recuperación
-- Ratios: Calmar, Sortino, Omega
-- Volatilidad rolling
-- Skewness y Kurtosis
-
-**CorrelationAnalysis**
-- Correlación rolling
-- Detección de quiebres de correlación
-- Matriz de correlación temporal
-
-**Métodos principales:**
 ```python
-risk_metrics.calculate_var_historical(confidence_level=0.95)
-risk_metrics.calculate_cvar(confidence_level=0.95)
-risk_metrics.calculate_max_drawdown()
-risk_metrics.calculate_calmar_ratio()
-risk_metrics.calculate_sortino_ratio()
-risk_metrics.get_risk_summary()
-```
-
-### 3. **backtesting.py** - Validación Robusta
-
-**AdvancedBacktester**
-- Walk-Forward Analysis (validación temporal)
-- Análisis por período de mercado
-- Validación con Monte Carlo
-- Métricas rolling
-- Análisis de sensibilidad
-
-**Métodos principales:**
-```python
-backtester.walk_forward_backtest(weights)
-backtester.time_period_analysis(weights)
-backtester.montecarlo_validation(weights, n_simulations=1000)
-backtester.rolling_performance_metrics(weights, window=63)
-backtester.parameter_sensitivity(weights_range)
-```
-
-### 4. **adaptive_optimization.py** - Optimización Dinámica
-
-**AdaptivePortfolioOptimizer**
-- Detección de regímenes de mercado
-- Rebalanceo automático
-- Restricciones de riesgo adaptativas
-- Integración con predicciones de ML
-
-**Métodos principales:**
-```python
-optimizer.detect_market_regime()
-optimizer.rebalance_on_signal(signal_type='volatility')
-optimizer.apply_risk_constraints(max_drawdown=0.15)
-optimizer.optimize_with_ml_predictions(predicted_returns, predicted_vol)
-optimizer.get_adaptive_weights(regime_detection=True)
-```
-
-### 5. **ml_advanced_models.py** - Machine Learning
-
-**LSTMPortfolioPredictor**
-- Red neuronal recurrente
-- Predicción de retornos futuros
-- Training con validación
-
-**GBPortfolioPredictor**
-- Gradient Boosting
-- Importancia de características
-
-**EnsemblePortfolioPredictor**
-- Combina LSTM, Gradient Boosting y Random Forest
-- Promedia predicciones
-
-**Métodos principales:**
-```python
-lstm.train(epochs=50, batch_size=32)
-lstm.predict_future(days=30)
-ensemble.predict_future(days=30)
-ensemble.plot_comparison(days=30)
+import os
+os.listdir('/content/distribucion-de-portafolio')
 ```
 
 ---
 
-## 📈 Ejemplos Prácticos
+### **Paso 3: Instalar Dependencias**
 
-### Ejemplo 1: Análisis Completo
+Crea una nueva celda y ejecuta:
 
 ```python
+# Instalar todas las dependencias
+!pip install -r /content/distribucion-de-portafolio/requirements.txt -q
+```
+
+**Nota**: El `-q` silencia la salida para que sea más rápido.
+
+Para comprobar que todo está instalado:
+
+```python
+import pandas as pd
+import numpy as np
+import tensorflow as tf
+import yfinance as yf
+print("✓ Todas las dependencias instaladas correctamente")
+```
+
+---
+
+### **Paso 4: Importar el Módulo del Proyecto**
+
+```python
+# Agregar el repositorio al path de Python
+import sys
+sys.path.append('/content/distribucion-de-portafolio')
+
+# Importar los módulos principales
+from unified_portfolio_colab import DataFetcher, UnifiedPortfolioManager
+from risk_metrics import AdvancedRiskMetrics
+from backtesting import AdvancedBacktester
+from adaptive_optimization import AdaptivePortfolioOptimizer
+from ml_advanced_models import EnsemblePortfolioPredictor
 from main import IntegratedPortfolioSystem
+
+print("✓ Módulos importados exitosamente")
+```
+
+---
+
+### **Paso 5: Ejecutar Análisis Completo (Recomendado para Principiantes)**
+
+Esta es la forma **más simple** de usar todo el sistema:
+
+```python
 from datetime import datetime
 
-# Crear sistema
+# Definir los activos y período
+tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
+start_date = '2023-01-01'
+end_date = datetime.now().strftime('%Y-%m-%d')
+
+print(f"📊 Analizando {len(tickers)} activos desde {start_date} hasta {end_date}")
+
+# Crear el sistema integrado
 system = IntegratedPortfolioSystem(
-    tickers=['AAPL', 'MSFT', 'GOOGL', 'AMZN'],
-    start_date='2023-01-01',
-    end_date=datetime.now().strftime('%Y-%m-%d')
+    tickers=tickers,
+    start_date=start_date,
+    end_date=end_date
 )
 
 # Ejecutar análisis completo
 results = system.run_full_analysis(initial_capital=100000)
 
-# Los resultados incluyen:
-# - risk_summary
-# - optimal_weights
-# - regime (mercado actual)
-# - backtest_results
-# - regime_analysis
-# - stress_test
-```
-
-### Ejemplo 2: Comparación de Estrategias
-
-```python
-import numpy as np
-from backtesting import AdvancedBacktester
-
-# Definir estrategias
-strategies = {
-    'equal_weight': np.array([0.25, 0.25, 0.25, 0.25]),
-    'market_cap': np.array([0.4, 0.3, 0.2, 0.1]),
-    'risk_parity': np.array([0.3, 0.25, 0.25, 0.2]),
-}
-
-backtester = AdvancedBacktester(prices, returns)
-
-# Comparar en múltiples períodos
-for strategy_name, weights in strategies.items():
-    wf_results = backtester.walk_forward_backtest(weights)
-    print(f"{strategy_name}:")
-    print(f"  Avg Return: {wf_results['avg_return']:.2%}")
-    print(f"  Avg Sharpe: {wf_results['avg_sharpe']:.4f}")
-```
-
-### Ejemplo 3: Predicción y Optimización
-
-```python
-from ml_advanced_models import EnsemblePortfolioPredictor
-from adaptive_optimization import AdaptivePortfolioOptimizer
-
-# Entrenar predictor
-ensemble = EnsemblePortfolioPredictor(portfolio_returns, lookback=20)
-ensemble.train()
-
-# Predecir retornos futuros
-predictions = ensemble.predict_future(days=30)
-
-# Usar predicciones para optimizar
-optimizer = AdaptivePortfolioOptimizer(prices, returns)
-predicted_returns = predictions['ensemble'].mean()
-predicted_vol = predictions['ensemble'].std()
-
-adaptive_weights = optimizer.optimize_with_ml_predictions(
-    predicted_returns=predicted_returns,
-    predicted_volatility=predicted_vol
-)
+# Mostrar resultados
+print("\n" + "="*60)
+print("📈 RESULTADOS DEL ANÁLISIS")
+print("="*60)
+print(f"\n✓ Resumen de Riesgo:")
+print(results['risk_summary'])
+print(f"\n✓ Pesos Óptimos (Máximo Sharpe):")
+print(results['optimal_weights'])
+print(f"\n✓ Régimen de Mercado Detectado:")
+print(results['regime'])
 ```
 
 ---
 
-## 🎯 Guía de Selección por Perfil de Inversor
+### **Paso 6: Análisis Paso a Paso (Para Usuarios Avanzados)**
 
-### Conservador
+Si prefieres mayor **control y flexibilidad**, sigue estos pasos:
+
+#### **6.1 Descargar los Datos**
+
 ```python
-# Portafolio de mínima volatilidad con límites
-optimal = manager.optimize_portfolio(
-    criterion='volatility',
-    bounds=((0.05, 0.3), (0.05, 0.3), (0.05, 0.3), (0.35, 0.70))
+# Crear fetcher y descargar datos
+fetcher = DataFetcher()
+tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN']
+prices = fetcher.fetch_data(
+    tickers=tickers,
+    start_date='2023-01-01',
+    end_date='2026-05-18'
 )
 
-# Máximo drawdown del 10%
-weights = optimizer.apply_risk_constraints(max_drawdown=0.10)
+print(f"✓ Datos descargados: {prices.shape[0]} fechas, {prices.shape[1]} activos")
+print(f"Últimas 5 precios:\n{prices.tail()}")
 ```
 
-### Moderado
+#### **6.2 Crear el Gestor de Portafolio**
+
 ```python
-# Máximo Sharpe con concentración limitada
-optimal = manager.optimize_with_constraints(
+# Crear gestor
+manager = UnifiedPortfolioManager(prices)
+
+print(f"✓ Retorno promedio diario: {manager.returns.mean().mean():.4%}")
+print(f"✓ Volatilidad: {manager.returns.std().mean():.4%}")
+
+# Ver matriz de correlación
+print("\n📊 Matriz de Correlación:")
+print(manager.returns.corr())
+```
+
+#### **6.3 Análisis de Riesgo**
+
+```python
+# Crear analizador de riesgo
+risk_analyzer = AdvancedRiskMetrics(manager.returns)
+
+# Obtener resumen
+risk_summary = risk_analyzer.get_risk_summary()
+
+print("🎯 ANÁLISIS DE RIESGO:")
+print("="*60)
+print(f"VaR (95%): {risk_summary['var_95']:.4%}")
+print(f"CVaR (95%): {risk_summary['cvar_95']:.4%}")
+print(f"Máximo Drawdown: {risk_summary['max_drawdown']:.4%}")
+print(f"Sharpe Ratio: {risk_summary['sharpe_ratio']:.4f}")
+print(f"Sortino Ratio: {risk_summary['sortino_ratio']:.4f}")
+```
+
+#### **6.4 Optimizar el Portafolio**
+
+```python
+# Optimizar con diferentes criterios
+print("🚀 OPTIMIZACIÓN DE PORTAFOLIOS:")
+print("="*60)
+
+# Máximo Sharpe
+optimal_sharpe = manager.optimize_portfolio('sharpe')
+print(f"\n1️⃣ Máximo Sharpe:")
+print(f"   Sharpe Ratio: {optimal_sharpe['sharpe_ratio']:.4f}")
+print(f"   Pesos:\n{optimal_sharpe['weights']}")
+
+# Mínima Volatilidad
+optimal_min_vol = manager.optimize_portfolio('volatility')
+print(f"\n2️⃣ Mínima Volatilidad:")
+print(f"   Volatilidad: {optimal_min_vol['volatility']:.4%}")
+print(f"   Pesos:\n{optimal_min_vol['weights']}")
+
+# Con restricciones
+optimal_constrained = manager.optimize_with_constraints(
     criterion='sharpe',
     min_weight=0.05,
     max_weight=0.50
 )
+print(f"\n3️⃣ Máximo Sharpe (con restricciones):")
+print(f"   Sharpe Ratio: {optimal_constrained['sharpe_ratio']:.4f}")
+print(f"   Pesos:\n{optimal_constrained['weights']}")
 ```
 
-### Agresivo
+#### **6.5 Backtesting**
+
 ```python
-# Maximizar retorno con límite de volatilidad
-optimal = manager.optimize_portfolio(
-    criterion='return',
-    bounds=((0.0, 1.0), (0.0, 1.0), (0.0, 1.0), (0.0, 1.0))
-)
+# Crear backtester
+backtester = AdvancedBacktester(prices, manager.returns)
+
+# Usar los pesos óptimos
+weights = optimal_sharpe['weights']
+
+# Walk-Forward Backtest
+print("📉 BACKTESTING - WALK-FORWARD ANALYSIS:")
+print("="*60)
+results = backtester.walk_forward_backtest(weights)
+
+print(f"Retorno Promedio: {results['avg_return']:.2%}")
+print(f"Sharpe Promedio: {results['avg_sharpe']:.4f}")
+print(f"Volatilidad Promedio: {results['avg_volatility']:.2%}")
+
+# Análisis por período
+print("\n📊 ANÁLISIS POR PERÍODO:")
+period_analysis = backtester.time_period_analysis(weights)
+print(period_analysis)
+```
+
+#### **6.6 Detección de Regímenes de Mercado**
+
+```python
+# Crear optimizador adaptativo
+optimizer = AdaptivePortfolioOptimizer(prices, manager.returns)
+
+# Detectar régimen actual
+regime = optimizer.detect_market_regime()
+
+print("🎯 RÉGIMEN DE MERCADO DETECTADO:")
+print("="*60)
+print(f"Régimen: {regime['regime']}")
+print(f"Volatilidad: {regime['volatility']:.4%}")
+print(f"Tendencia: {regime['trend']}")
+
+# Obtener pesos adaptativos
+adaptive_weights, info = optimizer.get_adaptive_weights()
+print(f"\n💡 Pesos Adaptativos al Régimen:")
+print(adaptive_weights)
+```
+
+#### **6.7 Predicción con Machine Learning**
+
+```python
+# Crear predictor ensemble
+print("🤖 PREDICCIÓN CON MACHINE LEARNING:")
+print("="*60)
+
+portfolio_returns = manager.returns.mean(axis=1)
+ensemble = EnsemblePortfolioPredictor(portfolio_returns, lookback=20)
+
+# Entrenar
+print("Entrenando modelos (esto puede tardar un momento)...")
+ensemble.train()
+
+# Predecir 30 días hacia adelante
+predictions = ensemble.predict_future(days=30)
+
+print(f"\n📈 Predicciones para los próximos 30 días:")
+print(f"LSTM: {predictions.get('lstm', [])[-1]:.4%}")
+print(f"Gradient Boosting: {predictions.get('gb', [])[-1]:.4%}")
+print(f"Ensemble: {predictions.get('ensemble', [])[-1]:.4%}")
+
+# Visualizar comparación
+ensemble.plot_comparison(days=30)
 ```
 
 ---
 
-## 📊 Métricas Principales
+### **Paso 7: Visualizaciones y Reportes**
 
-| Métrica | Fórmula | Interpretación |
-|---------|---------|-----------------|
-| **Sharpe Ratio** | (Return - Rf) / σ | Retorno ajustado por riesgo |
-| **Sortino Ratio** | (Return - Rf) / σ_downside | Solo penaliza volatilidad negativa |
-| **Calmar Ratio** | Annual Return / Max DD | Eficiencia de recuperación |
-| **Omega Ratio** | Ganancias / Pérdidas | Ratio ponderado |
-| **VaR** | Percentil X% | Pérdida máxima esperada |
-| **CVaR** | Promedio de pérdidas > VaR | Peores casos esperados |
+```python
+import matplotlib.pyplot as plt
+import seaborn as sns
 
----
+# Configurar estilo
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set_palette("husl")
 
-## ⚠️ Advertencias Importantes
+# 1. Desempeño histórico
+fig, axes = plt.subplots(2, 2, figsize=(14, 8))
 
-**Este software es para fines educativos y de investigación:**
-- El rendimiento pasado NO garantiza rendimientos futuros
-- Los modelos de ML tienen limitaciones inherentes
-- Toda inversión conlleva riesgo de pérdida de capital
-- Realizar backtesting exhaustivo antes de implementar
-- Consultar con asesor financiero profesional
+# Retornos acumulados
+cumulative_returns = (1 + manager.returns).cumprod()
+cumulative_returns.plot(ax=axes[0, 0], title='Retornos Acumulados')
+axes[0, 0].legend(loc='best')
 
----
+# Volatilidad rolling
+manager.returns.rolling(window=20).std().plot(ax=axes[0, 1], title='Volatilidad Rolling (20 días)')
 
-## 🔄 Flujo de Uso Recomendado
+# Matriz de correlación
+sns.heatmap(manager.returns.corr(), annot=True, ax=axes[1, 0], cmap='coolwarm', center=0)
+axes[1, 0].set_title('Matriz de Correlación')
 
-1. **Descargar datos** → `DataFetcher.fetch_data()`
-2. **Análisis inicial** → `UnifiedPortfolioManager.get_portfolio_summary()`
-3. **Análisis de riesgo** → `AdvancedRiskMetrics.get_risk_summary()`
-4. **Detectar régimen** → `AdaptivePortfolioOptimizer.detect_market_regime()`
-5. **Optimizar** → `optimize_portfolio()` o `optimize_with_ml_predictions()`
-6. **Validar** → `AdvancedBacktester.walk_forward_backtest()`
-7. **Stress test** → `stress_test()` y `monte_carlo_simulation()`
-8. **Reportar** → `export_to_pdf()`
+# Distribución de retornos
+manager.returns.mean().plot(kind='bar', ax=axes[1, 1], title='Retorno Promedio por Activo')
 
----
+plt.tight_layout()
+plt.savefig('portfolio_analysis.png', dpi=150, bbox_inches='tight')
+plt.show()
 
-## 📞 Soporte y Contribución
-
-Para reportar bugs o sugerir mejoras:
-- Abrir un Issue en GitHub
-- Realizar un Pull Request con mejoras
+print("✓ Gráficos guardados como 'portfolio_analysis.png'")
+```
 
 ---
 
-**Última actualización**: Mayo 2026  
-**Versión**: 2.0.0  
-**Autor**: kevinfr20
+### **Paso 8: Exportar Resultados**
+
+```python
+# Guardar resultados en CSV
+import pandas as pd
+
+# Matriz de correlación
+correlation_df = manager.returns.corr()
+correlation_df.to_csv('correlation_matrix.csv')
+
+# Pesos óptimos
+weights_df = pd.DataFrame({
+    'Ticker': tickers,
+    'Peso (%)': [w*100 for w in optimal_sharpe['weights']]
+})
+weights_df.to_csv('optimal_weights.csv', index=False)
+
+# Resumen de riesgo
+risk_df = pd.DataFrame(risk_summary, index=[0]).T
+risk_df.to_csv('risk_summary.csv')
+
+print("✓ Archivos exportados:")
+print("  - correlation_matrix.csv")
+print("  - optimal_weights.csv")
+print("  - risk_summary.csv")
+
+# Descargar archivos (opcional en Colab)
+from google.colab import files
+files.download('optimal_weights.csv')
+print("✓ Archivo descargado")
+```
+
+---
+
+### **Paso 9: Código Completo (Template Listo para Usar)**
+
+```python
+# ============================================
+# TEMPLATE COMPLETO PARA GOOGLE COLAB
+# ============================================
+
+import sys
+sys.path.append('/content/distribucion-de-portafolio')
+
+from unified_portfolio_colab import DataFetcher, UnifiedPortfolioManager
+from risk_metrics import AdvancedRiskMetrics
+from backtesting import AdvancedBacktester
+from adaptive_optimization import AdaptivePortfolioOptimizer
+from datetime import datetime
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# CONFIGURACIÓN
+TICKERS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN']
+START_DATE = '2023-01-01'
+INITIAL_CAPITAL = 100000
+
+print(f"📊 Iniciando análisis de portafolio...")
+print(f"   Activos: {TICKERS}")
+print(f"   Período: {START_DATE} - {datetime.now().strftime('%Y-%m-%d')}")
+
+# PASO 1: Descargar datos
+fetcher = DataFetcher()
+prices = fetcher.fetch_data(TICKERS, START_DATE)
+print(f"✓ Datos descargados: {prices.shape[0]} fechas")
+
+# PASO 2: Crear gestor
+manager = UnifiedPortfolioManager(prices)
+print(f"✓ Gestor creado")
+
+# PASO 3: Análisis de riesgo
+risk_analyzer = AdvancedRiskMetrics(manager.returns)
+risk_summary = risk_analyzer.get_risk_summary()
+print(f"✓ Análisis de riesgo completado")
+print(f"   VaR (95%): {risk_summary['var_95']:.2%}")
+
+# PASO 4: Optimización
+optimal = manager.optimize_portfolio('sharpe')
+print(f"✓ Portafolio optimizado")
+print(f"   Sharpe Ratio: {optimal['sharpe_ratio']:.4f}")
+
+# PASO 5: Backtesting
+backtester = AdvancedBacktester(prices, manager.returns)
+backtest_results = backtester.walk_forward_backtest(optimal['weights'])
+print(f"✓ Backtesting completado")
+print(f"   Retorno Promedio: {backtest_results['avg_return']:.2%}")
+
+# PASO 6: Exportar resultados
+weights_df = pd.DataFrame({
+    'Ticker': TICKERS,
+    'Peso (%)': [w*100 for w in optimal['weights']]
+})
+print("\n" + "="*50)
+print("📋 RESULTADO FINAL - PESOS ÓPTIMOS")
+print("="*50)
+print(weights_df.to_string(index=False))
+```
+
+---
+
+### **Troubleshooting - Problemas Comunes en Colab**
+
+| Problema | Solución |
+|----------|----------|
+| ❌ `ModuleNotFoundError: No module named 'tensorflow'` | Ejecuta: `!pip install tensorflow -q` |
+| ❌ `ConnectionError` al descargar datos | Intenta con diferentes tickers o espera 5 minutos |
+| ❌ `MemoryError` con demasiados datos | Reduce el número de activos o acorta el período |
+| ❌ GPU no disponible | Activa GPU: Menú → Entorno de ejecución → Cambiar tipo → GPU |
+| ❌ Gráficos no se muestran | Añade: `%matplotlib inline` al inicio |
+
+---
+
+### **Tips y Mejores Prácticas**
+
+✅ **Usa GPU**: Ve a Entorno de ejecución → Cambiar tipo → Selecciona GPU (x5 más rápido)
+
+✅ **Guarda tu notebook**: Colab autosave cada 30s, pero no confíes completamente
+
+✅ **Descargar resultados**: Usa `files.download()` para guardar en tu PC
+
+✅ **Compartir notebook**: Usa el botón Compartir en la esquina superior derecha
+
+✅ **Período de sesión**: Colab cierra después de 12 horas inactivas
+
+✅ **Para análisis largos**: Divide en celdas pequeñas para debug más fácil
+
+---
+
