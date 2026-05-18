@@ -229,7 +229,7 @@ def validate_setup():
     if bvl_key and bvl_key != 'your_bvl_api_key_here':
         print("   ✅ BVL_API_KEY configurada\\n")
     else:
-        print("   ⚠️  BVL_API_KEY no configurada (optional para Yahoo Finance)\\n")
+        print("   ⚠️  BVL_API_KEY no configurada (solo necesaria para BVL)\\n")
     
     print("6️⃣  Verificando credenciales de Trading Economics...")
     te_token = os.environ.get('TRADING_ECONOMICS_TOKEN')
