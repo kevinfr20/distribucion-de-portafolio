@@ -6,10 +6,6 @@ scipy>=1.7.0
 yfinance>=0.2.0
 scikit-learn>=1.0.0
 
-"""
-Módulo: requirements.txt
-Descripción: Dependencias del proyecto.
-"""
 
 # Core dependencies
 pandas>=1.3.0
