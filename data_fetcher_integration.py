@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 from typing import List, Optional, Tuple
 import logging
-from data_providers import DataProviderFactory, BaseDataProvider
+from data_providers import BVLDataProvider
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
