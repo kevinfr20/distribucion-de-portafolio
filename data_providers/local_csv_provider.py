@@ -31,7 +31,7 @@ class LocalCSVProvider:
 
     def __init__(
         self,
-        fallback_dir: str = "./data/bvl_fallback/",
+        fallback_dir: str = "/content/drive/MyDrive/BVL_Data",
         encoding: str = "utf-8",
         delimiter: str = ";",
     ):
@@ -43,7 +43,7 @@ class LocalCSVProvider:
             encoding (str): Codificación de los archivos. Por defecto "utf-8".
             delimiter (str): Delimitador del CSV. Por defecto ";".
         """
-        self.fallback_dir = Path(fallback_dir)
+        self.fallback_dir = Path(BVL_Data)
         self.encoding = encoding
         self.delimiter = delimiter
 
