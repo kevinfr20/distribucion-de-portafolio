@@ -12,9 +12,12 @@ import pandas as pd
 import numpy as np
 from typing import List, Optional, Tuple
 import logging
+<<<<<<< Updated upstream
 from data_providers import BVLDataProvider
 from data_providers import LocalCSVProvider
 
+=======
+>>>>>>> Stashed changes
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
