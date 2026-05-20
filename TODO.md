@@ -1,0 +1,6 @@
+- [ ] Inspeccionar referencias actuales a proveedores BVL/CSV y a la factoría
+- [ ] Implementar `LocalCSVDataProvider` heredando de `BaseDataProvider`
+- [ ] Eliminar lógica/API antigua de BVL o convertir compatibilidad sin requests/API keys
+- [ ] Actualizar exports/imports del paquete `data_providers`
+- [ ] Actualizar `DataProviderFactory` para usar CSV local en tickers peruanos
+- [ ] Verificar dependencias huérfanas y ejecutar pruebas/validación básica

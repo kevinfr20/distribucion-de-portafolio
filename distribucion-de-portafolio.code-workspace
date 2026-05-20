@@ -1,0 +1,119 @@
+{
+  "folders": [
+    {
+      "name": "distribucion-de-portafolio",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "python.envFile": "${workspaceFolder}/.env",
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.extraPaths": [
+      "${workspaceFolder}"
+    ],
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": [
+      "tests"
+    ],
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter",
+      "editor.tabSize": 4
+    },
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/.pytest_cache": true,
+      "**/.mypy_cache": true,
+      "**/.coverage": true,
+      "**/htmlcov": true
+    },
+    "search.exclude": {
+      "**/__pycache__": true,
+      "**/.pytest_cache": true,
+      "**/.mypy_cache": true,
+      "**/.venv": true,
+      "**/venv": true,
+      "**/htmlcov": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "ms-python.black-formatter",
+      "ms-python.flake8",
+      "ms-python.mypy-type-checker"
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Crear entorno virtual",
+        "type": "shell",
+        "command": "python -m venv .venv",
+        "problemMatcher": []
+      },
+      {
+        "label": "Instalar dependencias",
+        "type": "shell",
+        "command": ".venv\\Scripts\\python.exe -m pip install -r requirements.txt",
+        "dependsOn": "Crear entorno virtual",
+        "problemMatcher": []
+      },
+      {
+        "label": "Ejecutar pruebas",
+        "type": "shell",
+        "command": ".venv\\Scripts\\python.exe -m pytest tests",
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "Ejecutar aplicación principal",
+        "type": "shell",
+        "command": ".venv\\Scripts\\python.exe main.py",
+        "group": "build",
+        "problemMatcher": []
+      },
+      {
+        "label": "Formatear con Black",
+        "type": "shell",
+        "command": ".venv\\Scripts\\python.exe -m black .",
+        "problemMatcher": []
+      },
+      {
+        "label": "Analizar con Flake8",
+        "type": "shell",
+        "command": ".venv\\Scripts\\python.exe -m flake8 .",
+        "problemMatcher": []
+      }
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Python: main.py",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/main.py",
+        "console": "integratedTerminal",
+        "envFile": "${workspaceFolder}/.env"
+      },
+      {
+        "name": "Python: archivo actual",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${file}",
+        "console": "integratedTerminal",
+        "envFile": "${workspaceFolder}/.env"
+      }
+    ]
+  }
+}
