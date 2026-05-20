@@ -50,6 +50,8 @@ class IntegratedPortfolioSystem:
         if self.prices.empty:
             raise ValueError("❌ No se pudieron descargar datos.")
 
+        print(f"✅ Datos descargados: {self.prices.shape[0]} días, {self.prices.shape[1]} activos")
+        
         self.tickers = tickers
         self.returns = self.prices.pct_change().dropna()
         self.manager = UnifiedPortfolioManager(self.prices)
