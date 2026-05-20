@@ -107,7 +107,7 @@ class IntegratedPortfolioSystem:
         
         optimal_weights = self.manager.optimize_portfolio('sharpe', update_self_weights=True)
         Logger.log_metrics(
-            **optimal_weights, 'weights': dict(zip(self.tickers, optimal_weights['weights'].values()'\n')),
+            {**optimal_weights, 'weights': dict(zip(self.tickers, optimal_weights['weights'].values()))},
             "✅ Portafolio Óptimo (Máximo Sharpe)"
         )
         
