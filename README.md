@@ -537,6 +537,8 @@ import sys
 sys.path.append('/content/distribucion-de-portafolio')
 
 from unified_portfolio_colab import DataFetcher, UnifiedPortfolioManager
+from data_providers import BVLDataProvider
+from google.colab import userdata
 from risk_metrics import AdvancedRiskMetrics
 from backtesting import AdvancedBacktester
 from adaptive_optimization import AdaptivePortfolioOptimizer
@@ -545,13 +547,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # CONFIGURACIÓN
-TICKERS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN']
+TICKERS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN'] # Removed 'UNACEMC1'
 START_DATE = '2023-01-01'
+END_DATE = '2026-05-18'
 INITIAL_CAPITAL = 100000
 
 print(f"📊 Iniciando análisis de portafolio...")
 print(f"   Activos: {TICKERS}")
-print(f"   Período: {START_DATE} - {datetime.now().strftime('%Y-%m-%d')}")
+print(f"   Período: {START_DATE} -{END_DATE}")  #{datetime.now().strftime('%Y-%m-%d')}
 
 # PASO 1: Descargar datos
 fetcher = DataFetcher()
@@ -566,23 +569,52 @@ print(f"✓ Gestor creado")
 risk_analyzer = AdvancedRiskMetrics(manager.returns)
 risk_summary = risk_analyzer.get_risk_summary()
 print(f"✓ Análisis de riesgo completado")
-print(f"   VaR (95%): {risk_summary['var_95']:.2%}")
 
-# PASO 4: Optimización
+# Dynamically select the VaR key for display
+var_key_to_display = None
+if 'var_95' in risk_summary:
+    var_key_to_display = 'var_95'
+elif 'var_95_historical' in risk_summary:
+    var_key_to_display = 'var_95_historical'
+elif 'var_95_parametric' in risk_summary:
+    var_key_to_display = 'var_95_parametric'
+
+if var_key_to_display:
+    print(f"   VaR (95%): {risk_summary[var_key_to_display]:.2%}")
+else:
+    print("   VaR (95%): Not available (missing 'var_95', 'var_95_historical', or 'var_95_parametric')")
+
+# PASO 4: Optimización (This optimization is for the full period, not used directly in walk-forward backtest)
+# We keep it to print the full-period sharpe ratio as initially intended.
 optimal = manager.optimize_portfolio('sharpe')
 print(f"✓ Portafolio optimizado")
 print(f"   Sharpe Ratio: {optimal['sharpe_ratio']:.4f}")
 
+# Define the optimization function for backtesting
+def optimize_for_backtest(train_returns: pd.DataFrame):
+    temp_manager = UnifiedPortfolioManager(train_returns)
+    try:
+        temp_optimal = temp_manager.optimize_portfolio('sharpe')
+        # Ensure weights are returned in the correct order (matching train_returns columns)
+        return [temp_optimal['weights'][ticker] for ticker in train_returns.columns]
+    except RuntimeError as e:
+        print(f"Warning: Portfolio optimization failed for a backtest window: {e}. Using equal weights.")
+        # Fallback to equal weights if optimization fails
+        num_assets = len(train_returns.columns)
+        equal_weight = 1.0 / num_assets
+        return [equal_weight] * num_assets
+
 # PASO 5: Backtesting
 backtester = AdvancedBacktester(prices, manager.returns)
-backtest_results = backtester.walk_forward_backtest(optimal['weights'])
+# Pass the optimization function to walk_forward_backtest
+backtest_results = backtester.walk_forward_backtest(optimize_for_backtest)
 print(f"✓ Backtesting completado")
-print(f"   Retorno Promedio: {backtest_results['avg_return']:.2%}")
+print(f"   Retorno Promedio: {backtest_results['average_return']:.2%}")
 
 # PASO 6: Exportar resultados
 weights_df = pd.DataFrame({
     'Ticker': TICKERS,
-    'Peso (%)': [w*100 for w in optimal['weights']]
+    'Peso (%)': [optimal['weights'][ticker] * 100 for ticker in TICKERS]
 })
 print("\n" + "="*50)
 print("📋 RESULTADO FINAL - PESOS ÓPTIMOS")
