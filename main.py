@@ -180,9 +180,9 @@ class IntegratedPortfolioSystem:
 
 if __name__ == "__main__":
     # Configuración
-    tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
+    tickers = ['AAPL', 'MSFT', 'UNACEMC1', 'GOOGL', 'AMZN', 'TSLA']
     start_date = '2023-01-01'
-    end_date = datetime.now().strftime('%Y-%m-%d')
+    end_date = '2026-05-18'   #datetime.now().strftime('%Y-%m-%d')
     initial_capital = 100000
     
     try:

@@ -12,9 +12,13 @@ import pandas as pd
 import numpy as np
 from typing import List, Optional, Tuple
 import logging
+<<<<<<< HEAD
 from data_providers import DataProviderFactory, BaseDataProvider
 from data_providers import BVLDataProvider
 from data_providers import LocalCSVProvider
+=======
+from data_providers import BVLDataProvider
+>>>>>>> ca8c2054b911c219b3183f15aa5e8358bf9d1ea7
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
