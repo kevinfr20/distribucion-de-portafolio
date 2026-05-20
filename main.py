@@ -107,7 +107,7 @@ class IntegratedPortfolioSystem:
         
         optimal_weights = self.manager.optimize_portfolio('sharpe', update_self_weights=True)
         Logger.log_metrics(
-            {**optimal_weights, 'weights': dict(zip(self.tickers, optimal_weights['weights'].values()))},
+            **optimal_weights, 'weights': dict(zip(self.tickers, optimal_weights['weights'].values()'\n')),
             "✅ Portafolio Óptimo (Máximo Sharpe)"
         )
         
@@ -180,9 +180,9 @@ class IntegratedPortfolioSystem:
 
 if __name__ == "__main__":
     # Configuración
-    tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
+    tickers = ['AAPL', 'MSFT', 'UNACEMC1', 'GOOGL', 'AMZN', 'TSLA']
     start_date = '2023-01-01'
-    end_date = datetime.now().strftime('%Y-%m-%d')
+    end_date = '2026-05-18'   #datetime.now().strftime('%Y-%m-%d')
     initial_capital = 100000
     
     try:
