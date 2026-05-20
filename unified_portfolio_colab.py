@@ -13,89 +13,218 @@ warnings.filterwarnings('ignore')
 sns.set_style("darkgrid")
 
 # ==================== DATA FETCHER (Unificado) ====================
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider # Import the BVL Data Provider
+from google.colab import userdata # To get API key from secrets
+
+logger = logging.getLogger(__name__)
+
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider # Import the BVL Data Provider
+from google.colab import userdata # To get API key from secrets
+
+logger = logging.getLogger(__name__)
+
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider # Import the BVL Data Provider
+from google.colab import userdata # To get API key from secrets
+
+logger = logging.getLogger(__name__)
+
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider # Import the BVL Data Provider
+from google.colab import userdata # To get API key from secrets
+
+logger = logging.getLogger(__name__)
+
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider # Import the BVL Data Provider
+from google.colab import userdata # To get API key from secrets
+
+logger = logging.getLogger(__name__)
+
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider
+from google.colab import userdata
+
+logger = logging.getLogger(__name__)
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider
+from google.colab import userdata
+
+logger = logging.getLogger(__name__)
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider
+from google.colab import userdata
+
+logger = logging.getLogger(__name__)
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider
+from google.colab import userdata
+
+logger = logging.getLogger(__name__)
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider
+from google.colab import userdata
+
+logger = logging.getLogger(__name__)
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider
+from google.colab import userdata
+
+logger = logging.getLogger(__name__)
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+
+from data_providers import BVLDataProvider
+from google.colab import userdata
+
+logger = logging.getLogger(__name__)
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+from data_providers import BVLDataProvider
+from google.colab import userdata
+
+logger = logging.getLogger(__name__)
+
+
+import logging
+import pandas as pd
+import yfinance as yf
+from datetime import datetime
+from functools import reduce
+from data_providers import BVLDataProvider
+from google.colab import userdata
+
+logger = logging.getLogger(__name__)
+
 class DataFetcher:
-    """Descarga datos históricos de Yahoo Finance"""
+    def __init__(self):
+        self.bvl_api_key = userdata.get("BVL_API_KEY")
+        self.bvl_provider = BVLDataProvider(
+            api_base_url="https://api.bvl.com.pe/v1",
+            api_timeout=30,
+            fallback_dir="/content/distribucion-de-portafolio/data/bvl_fallback/",
+            api_key=self.bvl_api_key
+        )
 
-    @staticmethod
-    def fetch_data(tickers, start_date=None, end_date=None, include_dividends=False):
-        """
-        Descarga precios históricos ajustados o precios de cierre.
+    def fetch_data(self, tickers, start_date):
+        all_prices = []
+        end_date = datetime.now().strftime("%Y-%m-%d")
 
-        Parameters:
-        -----------
-        tickers : list
-            Lista de tickers (ej: ['AAPL', 'MSFT', 'GOOGL'])
-        start_date : str
-            Fecha inicio (YYYY-MM-DD)
-        end_date : str
-            Fecha fin (YYYY-MM-DD)
-        include_dividends : bool
-            Si es True, devuelve también los dividendos (solo para AdvancedMarkowitzOptimizer)
-
-        Returns:
-        --------
-        pd.DataFrame or tuple : Precios ajustados o (Precios de Cierre, Dividendos) si include_dividends es True
-        """
-        if start_date is None:
-            start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-        if end_date is None:
-            end_date = datetime.now().strftime('%Y-%m-%d')
-
-        print(f"📥 Descargando datos para {tickers} desde {start_date} a {end_date}...")
-        data = yf.download(tickers, start=start_date, end=end_date, progress=False)
-
-        if data.empty:
-            print(f"❌ Error: No se pudieron descargar datos para {tickers} desde {start_date} hasta {end_date}. Por favor, revise los tickers o el rango de fechas. Retornando DataFrame vacío.")
-            if include_dividends:
-                return pd.DataFrame(), pd.DataFrame()
-            return pd.DataFrame()
-
-        if isinstance(data.columns, pd.MultiIndex):
-            adj_close_data = None
-            close_data = None
+        for ticker in tickers:
+            ticker_df = None
+            # Try yfinance
             try:
-                adj_close_data = data['Adj Close']
-            except KeyError:
-                pass
+                data = yf.download(ticker, start=start_date, end=end_date, progress=False)
+                if not data.empty:
+                    # Handle MultiIndex or SingleIndex
+                    if isinstance(data.columns, pd.MultiIndex):
+                        col = "Adj Close" if "Adj Close" in data.columns.get_level_values(0) else "Close"
+                        ticker_df = data[col][ticker].to_frame(name=ticker)
+                    else:
+                        col = "Adj Close" if "Adj Close" in data.columns else "Close"
+                        ticker_df = data[col].to_frame(name=ticker)
+            except Exception as e:
+                logger.warning(f"yfinance failed for {ticker}: {e}")
 
-            try:
-                close_data = data['Close']
-            except KeyError:
-                pass
+            # Fallback to BVL/Local CSV
+            if ticker_df is None or ticker_df.empty:
+                try:
+                    bvl_start = datetime.strptime(start_date, "%Y-%m-%d")
+                    bvl_data = self.bvl_provider.get_historical_data(ticker, bvl_start, datetime.now())
+                    if bvl_data is not None and not bvl_data.empty:
+                        ticker_df = bvl_data[["Close"]].copy()
+                        ticker_df.columns = [ticker]
+                except Exception as e:
+                    logger.error(f"BVLProvider failed for {ticker}: {e}")
 
-            if include_dividends:
-                dividends = data['Dividends'] if 'Dividends' in data.columns.get_level_values(0) else pd.DataFrame()
-                if close_data is None:
-                    print("⚠️ No se encontró la columna 'Close'. Usando 'Adj Close' para cálculo de retornos con dividendos.")
-                    if adj_close_data is None:
-                         print(f"❌ Error: Ni 'Adj Close' ni 'Close' se encontraron en los datos MultiIndex para {tickers}. Retornando DataFrame vacío.")
-                         return pd.DataFrame(), pd.DataFrame()
-                    return adj_close_data, dividends
-                return close_data, dividends # Para Markowitz con dividendos, usar Close
-            else: # When include_dividends is False
-                if adj_close_data is not None:
-                    return adj_close_data
-                elif close_data is not None: # Fallback to 'Close' if 'Adj Close' not found
-                    print(f"⚠️ La columna 'Adj Close' no se encontró para {tickers}. Usando 'Close' en su lugar.")
-                    return close_data
-                else:
-                    print(f"❌ Error: Ni 'Adj Close' ni 'Close' se encontraron en los datos MultiIndex para {tickers}. Columnas de primer nivel disponibles: {data.columns.get_level_values(0).unique().tolist()}. Retornando DataFrame vacío.")
-                    return pd.DataFrame()
-        else:
-            if include_dividends:
-                dividends = data['Dividends'] if 'Dividends' in data.columns else pd.DataFrame()
-                if 'Close' not in data.columns:
-                    print("⚠️ No se encontró la columna 'Close'. Usando 'Adj Close' para cálculo de retornos con dividendos.")
-                    return data['Adj Close'], dividends
-                return data['Close'], dividends
-            else:
-                if 'Adj Close' not in data.columns:
-                    print(f"❌ Error: La columna 'Adj Close' no se encontró en los datos descargados para {tickers}. Retornando DataFrame vacío.")
-                    return pd.DataFrame()
-                return data['Adj Close']
+            if ticker_df is not None and not ticker_df.empty:
+                # Normalize index to date-only for alignment
+                ticker_df.index = pd.to_datetime(ticker_df.index).normalize()
+                ticker_df.index.name = "Date"
+                all_prices.append(ticker_df)
 
+        if not all_prices:
+            raise ValueError("No se pudo obtener datos para ningún ticker.")
 
-# ==================== GESTOR DE PORTAFOLIOS UNIFICADO ====================
+        # Outer join on dates and forward fill to handle different market calendars
+        final_df = reduce(lambda left, right: pd.merge(left, right, left_index=True, right_index=True, how="outer"), all_prices)
+        return final_df.sort_index().ffill()
+
 class UnifiedPortfolioManager:
     """Sistema integrado para análisis de riesgo y optimización de portafolios.
 
