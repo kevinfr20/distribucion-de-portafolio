@@ -12,13 +12,9 @@ import pandas as pd
 import numpy as np
 from typing import List, Optional, Tuple
 import logging
-<<<<<<< HEAD
-from data_providers import DataProviderFactory, BaseDataProvider
 from data_providers import BVLDataProvider
 from data_providers import LocalCSVProvider
-=======
-from data_providers import BVLDataProvider
->>>>>>> ca8c2054b911c219b3183f15aa5e8358bf9d1ea7
+
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +22,18 @@ logger = logging.getLogger(__name__)
 
 
 # ==================== WRAPPER: DATA FETCHER MEJORADO ====================
+class PortfolioOptimizer:
+    def __init__(self):
+        self.data_provider = BVLDataProvider()  # Automático con fallback
+    
+    def optimize(self, tickers: list):
+        for ticker in tickers:
+            # ¡Sin cambios! El fallback es automático
+            df = self.data_provider.get_historical_data(
+                ticker=ticker,
+                start_date=...,
+                end_date=...
+            )
 class DataFetcher:
     """
     Wrapper mejorado del DataFetcher original que integra el sistema de proveedores.
